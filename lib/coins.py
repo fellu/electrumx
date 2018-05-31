@@ -480,6 +480,47 @@ class BitcoinGold(EquihashMixin, BitcoinMixin, Coin):
 
         return h
 
+class BitcoinInterest(EquihashMixin, BitcoinMixin, Coin):
+    CHUNK_SIZE = 252
+    NAME = "BitcoinInterest"
+    SHORTNAME = "BCI"
+    FORK_HEIGHT = 505083
+    P2PKH_VERBYTE = bytes.fromhex("66")
+    P2SH_VERBYTES = [bytes.fromhex("17")]
+    DESERIALIZER = lib_tx.DeserializerEquihashSegWit
+    TX_COUNT = 265026255
+    TX_COUNT_HEIGHT = 499923
+    TX_PER_BLOCK = 50
+    REORG_LIMIT = 1000
+    RPC_PORT = 8332
+
+    @classmethod
+    def header_hash(cls, header):
+        '''Given a header return hash'''
+        height, = struct.unpack('<I', header[68:72])
+
+        if height >= cls.FORK_HEIGHT:
+            return double_sha256(header)
+        else:
+            return double_sha256(header[:68] + header[100:112])
+
+    @classmethod
+    def electrum_header(cls, header, height):
+        h = dict(
+            block_height=height,
+            version=struct.unpack('<I', header[:4])[0],
+            prev_block_hash=hash_to_str(header[4:36]),
+            merkle_root=hash_to_str(header[36:68]),
+            timestamp=struct.unpack('<I', header[100:104])[0],
+            reserved=hash_to_str(header[72:100]),
+            bits=struct.unpack('<I', header[104:108])[0],
+            nonce=hash_to_str(header[108:140]),
+            solution=hash_to_str(header[140:])
+        )
+
+	return h
+
+
 
 class BitcoinGoldTestnet(BitcoinGold):
     FORK_HEIGHT = 1
