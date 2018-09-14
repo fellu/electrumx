@@ -45,7 +45,7 @@ class Daemon(object):
         self.mempool_refresh_event = asyncio.Event()
         # Limit concurrent RPC calls to this number.
         # See DEFAULT_HTTP_WORKQUEUE in bitcoind, which is typically 16
-        self.workqueue_semaphore = asyncio.Semaphore(value=10)
+        self.workqueue_semaphore = asyncio.Semaphore(value=1)
         self.down = False
         self.last_error_time = 0
         self.req_id = 0
@@ -175,6 +175,7 @@ class Daemon(object):
         payload = {'method': method, 'id': self.next_req_id()}
         if params:
             payload['params'] = params
+
         return await self._send(payload, processor)
 
     async def _send_vector(self, method, params_iterable, replace_errs=False):

@@ -33,6 +33,8 @@ necessary for appropriate handling.
 from collections import namedtuple
 import re
 import struct
+import sha3
+import requests
 from decimal import Decimal
 from hashlib import sha256
 from functools import partial
@@ -484,25 +486,61 @@ class BitcoinInterest(EquihashMixin, BitcoinMixin, Coin):
     CHUNK_SIZE = 252
     NAME = "BitcoinInterest"
     SHORTNAME = "BCI"
-    FORK_HEIGHT = 505083
+    FORK_HEIGHT = 0
     P2PKH_VERBYTE = bytes.fromhex("66")
     P2SH_VERBYTES = [bytes.fromhex("17")]
     DESERIALIZER = lib_tx.DeserializerEquihashSegWit
     TX_COUNT = 265026255
-    TX_COUNT_HEIGHT = 499923
+    TX_COUNT_HEIGHT = 1
     TX_PER_BLOCK = 50
     REORG_LIMIT = 1000
     RPC_PORT = 8332
+    BASIC_HEADER_SIZE = 140
+    GENESIS_HASH = ('00000d74c4f0d40f1bc6c26908144029'
+                    '7f72939b13faaec052023e3899f59078')
+
+    @staticmethod
+    def swap(line):
+        line_list = [line[i:i + 2] for i in range(0, len(line), 2)]
+        line_list.reverse()
+        return ''.join(line_list)
+
 
     @classmethod
     def header_hash(cls, header):
         '''Given a header return hash'''
-        height, = struct.unpack('<I', header[68:72])
+        s = sha3.keccak_256()
 
-        if height >= cls.FORK_HEIGHT:
-            return double_sha256(header)
-        else:
-            return double_sha256(header[:68] + header[100:112])
+        height, = struct.unpack('<I', header[68:72])
+        nonce = int(hash_to_str(header[132:140]), 16)
+        mixhash = hash_to_str(header[141:173])
+        header_hash_hex = header[:108]+bytes(32)
+        s.update(header_hash_hex)
+        header_hash = cls.swap(s.hexdigest())
+
+
+        go_wrapper_url = "https://progpow.bitcoininterest.io/" \
+                         "?header_hash={0}" \
+                         "&nonce={1}" \
+                         "&mix_hash={2}".format(header_hash, nonce, mixhash)
+        r = requests.get(go_wrapper_url)
+        block_hash = r.json().get('digest')
+
+
+
+        import logging
+        logger = logging.getLogger()
+        logger.info('height - {0}'.format(height))
+        logger.info('header_hash - {0}'.format(header_hash))
+        logger.info('nonce - {0}'.format(nonce))
+        logger.info('mixhash - {0}'.format(mixhash))
+        logger.info('url - {0}'.format(go_wrapper_url))
+        logger.info('digest - {0}'.format(r.json().get('digest')))
+
+
+        block_hash = bytes.fromhex(cls.swap(block_hash))
+        return block_hash
+
 
     @classmethod
     def electrum_header(cls, header, height):
@@ -518,7 +556,7 @@ class BitcoinInterest(EquihashMixin, BitcoinMixin, Coin):
             solution=hash_to_str(header[140:])
         )
 
-	return h
+        return h
 
 
 

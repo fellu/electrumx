@@ -87,11 +87,11 @@ class Prefetcher(object):
         async with self.semaphore:
             while self.cache_size < self.min_cache_size:
                 # Try and catch up all blocks but limit to room in cache.
-                # Constrain fetch count to between 0 and 500 regardless;
+                # Constrain fetch count to between 0 and 10 regardless;
                 # testnet can be lumpy.
                 cache_room = self.min_cache_size // self.ave_size
                 count = min(daemon_height - self.fetched_height, cache_room)
-                count = min(500, max(count, 0))
+                count = min(10, max(count, 0))
                 if not count:
                     if not self.caught_up:
                         self.caught_up = True
@@ -501,6 +501,7 @@ class BlockProcessor(server.db.DB):
         headers = [block.header for block in blocks]
         self.height = height
         self.headers.extend(headers)
+        self.logger.info("Set tip {0}".format(hash_to_str(self.coin.header_hash(headers[-1]))))
         self.tip = self.coin.header_hash(headers[-1])
 
         # If caught up, flush everything as client queries are
@@ -574,9 +575,11 @@ class BlockProcessor(server.db.DB):
             block = coin.block(raw_block, self.height)
             header_hash = coin.header_hash(block.header)
             if header_hash != self.tip:
+                self.logger.info("tip {0}".format(hash_to_str(self.tip)))
                 raise ChainError('backup block {} not tip {} at height {:,d}'
                                  .format(hash_to_str(header_hash),
                                          hash_to_str(self.tip), self.height))
+            print("self.tip = coin.header_prevhash(block.header) {0}".format(coin.header_prevhash(block.header)))
             self.tip = coin.header_prevhash(block.header)
             self.backup_txs(block.transactions)
             self.height -= 1
