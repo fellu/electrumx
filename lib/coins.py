@@ -527,7 +527,6 @@ class BitcoinInterest(EquihashMixin, BitcoinMixin, Coin):
         block_hash = r.json().get('digest')
 
 
-
         import logging
         logger = logging.getLogger()
         logger.info('height - {0}'.format(height))
@@ -536,7 +535,6 @@ class BitcoinInterest(EquihashMixin, BitcoinMixin, Coin):
         logger.info('mixhash - {0}'.format(mixhash))
         logger.info('url - {0}'.format(go_wrapper_url))
         logger.info('digest - {0}'.format(r.json().get('digest')))
-
 
         block_hash = bytes.fromhex(cls.swap(block_hash))
         return block_hash
