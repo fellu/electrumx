@@ -91,7 +91,7 @@ class Prefetcher(object):
                 # testnet can be lumpy.
                 cache_room = self.min_cache_size // self.ave_size
                 count = min(daemon_height - self.fetched_height, cache_room)
-                count = min(20, max(count, 0))
+                count = min(30, max(count, 0))
                 if not count:
                     if not self.caught_up:
                         self.caught_up = True
